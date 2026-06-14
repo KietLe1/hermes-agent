@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hermes Agent trên VPS Ubuntu 24.04 — Discord, 24/7, bảo mật</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1d212b; --text:#e6e8ee; --muted:#9aa3b2;
+    --accent:#7f77dd; --accent2:#5dcaa5; --warn:#fac775; --danger:#e24b4a; --border:#2a2f3a;
+    --code:#0b0d11; --link:#9fb7ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:920px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:28px;line-height:1.25;margin:.2em 0 .1em}
+  h2{font-size:21px;margin:2.2em 0 .5em;padding-top:.4em;border-top:1px solid var(--border)}
+  h3{font-size:16px;margin:1.4em 0 .4em;color:#cdd3df}
+  p{margin:.5em 0}
+  a{color:var(--link)}
+  code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.92em;background:#222633;padding:.1em .35em;border-radius:4px}
+  pre{position:relative;background:var(--code);border:1px solid var(--border);border-radius:10px;padding:14px 44px 14px 14px;overflow:auto;margin:.6em 0}
+  pre code{background:none;padding:0;font-size:13px;line-height:1.6;white-space:pre;color:#dfe5f1}
+  .cp{position:absolute;top:8px;right:8px;background:#2a2f3a;color:#cdd3df;border:1px solid var(--border);border-radius:6px;font-size:11px;padding:3px 8px;cursor:pointer}
+  .cp:hover{background:#363c4a}
+  .lead{color:var(--muted);font-size:16px}
+  .box{border-radius:10px;padding:12px 16px;margin:1em 0;border:1px solid var(--border);background:var(--panel)}
+  .box.info{border-left:4px solid var(--accent)}
+  .box.ok{border-left:4px solid var(--accent2)}
+  .box.warn{border-left:4px solid var(--warn)}
+  .box.danger{border-left:4px solid var(--danger);background:#241718}
+  .box b{color:#fff}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;background:#262b36;color:var(--muted);margin-left:6px;vertical-align:middle}
+  ol,ul{padding-left:22px}
+  li{margin:.25em 0}
+  .toc{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin:1.4em 0}
+  .toc a{display:block;color:#cdd3df;text-decoration:none;padding:3px 0}
+  .toc a:hover{color:#fff}
+  .step{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:14px;margin-right:8px;vertical-align:middle}
+  table{border-collapse:collapse;width:100%;margin:.8em 0;font-size:14px}
+  th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel2)}
+  kbd{background:#2a2f3a;border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:12px}
+  .muted{color:var(--muted)}
+  footer{margin-top:50px;color:var(--muted);font-size:13px;border-top:1px solid var(--border);padding-top:16px}
+  .pill{font-size:12px;color:var(--accent2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Hermes Agent trên VPS Ubuntu 24.04 ☤</h1>
+<p class="lead">Tự host một Hermes Agent chạy <b>24/7</b>, dùng <b>Codex (đăng nhập ChatGPT, không API key)</b> làm bộ não, kết nối <b>Discord</b> — cài <b>từ đầu</b> trên Ubuntu 24.04 mới tinh, theo hướng <b>bảo mật trước hết</b>.</p>
+
+<div class="box danger">
+<b>⚠ Đọc trước khi bắt đầu — vì sao bảo mật là số 1.</b><br>
+Hermes có tool <code>terminal</code>: nó <b>chạy lệnh shell thật</b> trên VPS. Khi mở qua Discord 24/7, bất kỳ ai bạn cho phép nhắn bot đều có thể khiến nó chạy lệnh. Vì vậy tài liệu này bắt buộc: (1) chạy bằng <b>user thường, KHÔNG phải root</b>; (2) <b>allowlist Discord chỉ mình bạn</b>; (3) khóa SSH + firewall; (4) tùy chọn cô lập terminal bằng Docker. Đừng bỏ qua các bước bảo mật.
+</div>
+
+<div class="box info">
+<b>Kiến trúc &amp; cổng mạng:</b> Bot Discord kết nối <b>ra ngoài</b> (outbound websocket tới Discord). Hermes <b>không cần mở cổng vào</b> nào để chạy bot. Nhờ vậy firewall có thể đóng gần như toàn bộ inbound — chỉ chừa SSH. (Chỉ khi nào bạn bật Web Dashboard công khai mới cần mở thêm cổng — guide này KHÔNG bật.)
+</div>
+
+<div class="toc">
+<b>Các bước</b>
+<a href="#s0">0 · Chuẩn bị (cần gì trước khi bắt đầu)</a>
+<a href="#s1">1 · Đăng nhập VPS lần đầu + cập nhật hệ thống</a>
+<a href="#s2">2 · Tạo user thường có sudo (không dùng root)</a>
+<a href="#s3">3 · Khóa SSH bằng key + tắt mật khẩu/root</a>
+<a href="#s4">4 · Firewall (UFW) + fail2ban + tự động vá bảo mật</a>
+<a href="#s5">5 · Cài Hermes (dưới user thường)</a>
+<a href="#s6">6 · Đăng nhập Codex (device-code, hợp headless)</a>
+<a href="#s7">7 · Tạo Discord bot + cấu hình .env an toàn</a>
+<a href="#s8">8 · Chạy thử gateway (foreground) để kiểm tra</a>
+<a href="#s9">9 · Chạy 24/7 bằng systemd (tự khởi động lại)</a>
+<a href="#s10">10 · (Nâng cao) Cô lập tool terminal bằng Docker</a>
+<a href="#s11">11 · Vận hành: log, cập nhật, backup</a>
+<a href="#s12">12 · Checklist bảo mật cuối cùng</a>
+</div>
+
+<!-- ============================================================= -->
+<h2 id="s0"><span class="step">0</span>Chuẩn bị</h2>
+<p>Bạn cần sẵn:</p>
+<ul>
+<li>Một <b>VPS Ubuntu 24.04</b> mới (1 vCPU / 1–2 GB RAM là chạy được; 2 GB thoải mái hơn).</li>
+<li><b>IP VPS</b> + cách đăng nhập ban đầu (thường là <code>root</code> + mật khẩu, hoặc key do nhà cung cấp cấp).</li>
+<li>Máy tính cá nhân của bạn (để mở trình duyệt khi đăng nhập Codex &amp; tạo Discord bot).</li>
+<li>Tài khoản <b>ChatGPT/Codex</b> (cho bộ não) và tài khoản <b>Discord</b>.</li>
+</ul>
+<div class="box info">Mọi lệnh bắt đầu bằng <code>$</code> chạy <b>trên VPS</b>. Lệnh nào chạy trên máy bạn sẽ ghi rõ “<b>trên máy cá nhân</b>”.</div>
+
+<!-- ============================================================= -->
+<h2 id="s1"><span class="step">1</span>Đăng nhập VPS + cập nhật hệ thống</h2>
+<p><b>Trên máy cá nhân</b>, mở terminal (PowerShell/Terminal) và SSH vào VPS (thay IP):</p>
+<pre><code>ssh root@YOUR_VPS_IP</code></pre>
+<p>Cập nhật toàn bộ gói &amp; cài vài tiện ích cơ bản:</p>
+<pre><code>apt update &amp;&amp; apt -y upgrade
+apt -y install curl git ufw fail2ban unattended-upgrades ca-certificates
+timedatectl set-timezone Asia/Ho_Chi_Minh</code></pre>
+<p class="muted">Nếu kernel được nâng cấp, có thể cần <code>reboot</code> rồi SSH lại.</p>
+
+<!-- ============================================================= -->
+<h2 id="s2"><span class="step">2</span>Tạo user thường có sudo</h2>
+<div class="box danger"><b>Không bao giờ chạy Hermes bằng root.</b> Agent chạy lệnh shell — nếu là root, một lệnh sai (hoặc bị lạm dụng qua Discord) có thể phá cả máy.</div>
+<p>Tạo user <code>hermes</code> và cấp quyền sudo:</p>
+<pre><code>adduser hermes          # đặt mật khẩu mạnh khi được hỏi
+usermod -aG sudo hermes</code></pre>
+
+<!-- ============================================================= -->
+<h2 id="s3"><span class="step">3</span>Khóa SSH bằng key + tắt mật khẩu/root</h2>
+
+<div class="box warn"><b>Thứ tự rất quan trọng để KHÔNG tự khóa mình ra ngoài:</b> cài key → <b>kiểm tra đăng nhập bằng key ở một cửa sổ MỚI</b> → mới tắt mật khẩu.</div>
+
+<h3>3.1 Tạo &amp; nạp khóa SSH</h3>
+<p><b>Trên máy cá nhân</b> (nếu chưa có key):</p>
+<pre><code>ssh-keygen -t ed25519 -C "hermes-vps"</code></pre>
+<p>Chép public key lên VPS cho user <code>hermes</code> (cách dễ nhất, <b>trên máy cá nhân</b>):</p>
+<pre><code>ssh-copy-id hermes@YOUR_VPS_IP</code></pre>
+<p class="muted">Windows không có <code>ssh-copy-id</code>? Làm thủ công: <b>trên VPS</b> chạy
+<code>mkdir -p /home/hermes/.ssh &amp;&amp; nano /home/hermes/.ssh/authorized_keys</code>, dán nội dung file <code>~/.ssh/id_ed25519.pub</code> từ máy bạn vào, lưu lại, rồi:</p>
+<pre><code>chown -R hermes:hermes /home/hermes/.ssh
+chmod 700 /home/hermes/.ssh
+chmod 600 /home/hermes/.ssh/authorized_keys</code></pre>
+
+<h3>3.2 KIỂM TRA đăng nhập bằng key (cửa sổ mới)</h3>
+<p><b>Trên máy cá nhân</b>, mở cửa sổ terminal MỚI (giữ cửa sổ root cũ đang mở phòng hờ):</p>
+<pre><code>ssh hermes@YOUR_VPS_IP</code></pre>
+<p>Vào được mà không hỏi mật khẩu (hoặc chỉ hỏi passphrase của key) → OK, tiếp tục.</p>
+
+<h3>3.3 Tắt mật khẩu &amp; đăng nhập root qua SSH</h3>
+<div class="box info">Ảnh cloud Ubuntu 24.04 thường có file đè <code>/etc/ssh/sshd_config.d/50-cloud-init.conf</code> bật lại mật khẩu. Cách chắc ăn: tạo file drop-in tên đứng sau cùng (thắng mọi file khác).</div>
+<p><b>Trên VPS</b> (đang là user hermes, dùng sudo):</p>
+<pre><code>sudo tee /etc/ssh/sshd_config.d/99-hardening.conf &gt; /dev/null &lt;&lt;'EOF'
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+KbdInteractiveAuthentication no
+EOF
+sudo systemctl restart ssh</code></pre>
+<div class="box warn"><b>Đừng đóng cửa sổ root cũ vội.</b> Mở thêm một cửa sổ MỚI và thử <code>ssh hermes@IP</code> lần nữa. Vào được mới đóng cửa sổ root. Từ giờ chỉ đăng nhập bằng user <code>hermes</code> + key.</div>
+
+<!-- ============================================================= -->
+<h2 id="s4"><span class="step">4</span>Firewall + fail2ban + tự vá bảo mật</h2>
+<h3>4.1 UFW — chỉ chừa SSH</h3>
+<pre><code>sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow OpenSSH
+sudo ufw enable
+sudo ufw status verbose</code></pre>
+<p class="muted">Bot Discord đi outbound nên không cần mở cổng vào nào khác.</p>
+
+<h3>4.2 fail2ban (chống dò mật khẩu SSH)</h3>
+<pre><code>sudo systemctl enable --now fail2ban
+sudo fail2ban-client status sshd</code></pre>
+
+<h3>4.3 Tự động cập nhật bản vá bảo mật</h3>
+<pre><code>sudo dpkg-reconfigure -plow unattended-upgrades   # chọn &lt;Yes&gt;
+systemctl status unattended-upgrades --no-pager</code></pre>
+
+<!-- ============================================================= -->
+<h2 id="s5"><span class="step">5</span>Cài Hermes (dưới user thường)</h2>
+<div class="box info">Đăng nhập VPS bằng user <code>hermes</code> (<b>không phải root</b>) rồi mới cài. Trên Linux, <code>HERMES_HOME</code> = <code>/home/hermes/.hermes</code>.</div>
+
+<div class="box warn"><b>Thận trọng “curl | bash”:</b> bạn đang chạy script cài từ mạng. Nếu muốn yên tâm, tải về xem trước rồi mới chạy:
+<pre><code>curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o install-hermes.sh
+less install-hermes.sh      # xem nội dung
+bash install-hermes.sh</code></pre>
+Hoặc chạy thẳng một dòng như dưới nếu bạn tin nguồn.</div>
+
+<pre><code>curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+source ~/.bashrc
+hermes --version
+hermes doctor</code></pre>
+<p>Installer tự lo Python 3.11, Node, ripgrep, ffmpeg (cài cục bộ trong <code>~/.hermes</code>, không cần admin). <code>doctor</code> sẽ cảnh báo “chưa login” và “thiếu DISCORD_BOT_TOKEN” — đúng như mong đợi, ta xử lý ở các bước sau.</p>
+
+<div class="box info"><b>Muốn chạy bản fork của bạn thay vì bản chính thức?</b> Thay bước này bằng: <code>git clone &lt;fork-url&gt;</code> → cài <code>uv</code> → <code>uv venv venv --python 3.11</code> → <code>uv pip install -e ".[all,messaging]" --python ./venv/bin/python</code>, rồi dùng <code>./venv/bin/hermes</code> ở mọi lệnh bên dưới. Vì <b>không cần sửa code</b>, bản chính thức là đủ và đơn giản hơn cho production.</div>
+
+<!-- ============================================================= -->
+<h2 id="s6"><span class="step">6</span>Đăng nhập Codex (device-code — hợp headless)</h2>
+<p>Codex dùng luồng <b>device-code</b>: VPS in ra một URL + mã, bạn mở URL trên trình duyệt máy cá nhân để duyệt — không cần trình duyệt trên VPS.</p>
+<pre><code>hermes auth add openai-codex</code></pre>
+<ol>
+<li>VPS in <b>URL + mã</b>. Mở URL đó trên máy cá nhân, đăng nhập ChatGPT/Codex, nhập mã, xác nhận.</li>
+<li>Kết quả: <code>Added openai-codex OAuth credential #1</code>.</li>
+</ol>
+<p>Đặt Codex làm model chính &amp; kiểm tra:</p>
+<pre><code>hermes config set model.provider openai-codex
+hermes config set model.default gpt-5.3-codex   # đổi theo model bạn có; hoặc chạy `hermes model`
+hermes auth status openai-codex                 # -&gt; logged in</code></pre>
+
+<div class="box info"><b>(Tùy chọn) Gemini qua đăng nhập Google trên VPS headless:</b> luồng Gemini OAuth mở cổng loopback nên cần <b>SSH port-forward</b>. Trên máy cá nhân: <code>ssh -L 8085:localhost:8085 hermes@IP</code> rồi mới chạy <code>hermes auth add google-gemini-cli</code> trên VPS, và mở link nó in ra trên trình duyệt máy bạn. Không bắt buộc — Codex đã đủ làm bộ não.</div>
+
+<!-- ============================================================= -->
+<h2 id="s7"><span class="step">7</span>Tạo Discord bot + cấu hình .env an toàn</h2>
+
+<h3>7.1 Tạo bot (trên máy cá nhân, trình duyệt)</h3>
+<ol>
+<li>Vào <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">discord.com/developers/applications</a> → <b>New Application</b>.</li>
+<li>Tab <b>Bot</b> → <b>Reset Token</b> → <b>Copy</b> token (giữ bí mật tuyệt đối).</li>
+<li>Vẫn tab <b>Bot</b> → bật <b>MESSAGE CONTENT INTENT</b> (bắt buộc để bot đọc nội dung tin nhắn).</li>
+<li>Tab <b>OAuth2 → URL Generator</b>: scopes <code>bot</code> + <code>applications.commands</code>; permissions: Send Messages, Read Message History, Create Public Threads, Add Reactions. Mở URL sinh ra → mời bot vào server của bạn.</li>
+<li>Lấy <b>User ID của bạn</b>: Discord → Settings → Advanced → bật <b>Developer Mode</b>; chuột phải tên bạn → <b>Copy User ID</b>.</li>
+</ol>
+
+<h3>7.2 Ghi token vào .env (trên VPS)</h3>
+<pre><code>nano ~/.hermes/.env</code></pre>
+<p>Thêm (thay giá trị trong <code>&lt;...&gt;</code>):</p>
+<pre><code>DISCORD_BOT_TOKEN=&lt;token-bạn-copy&gt;
+DISCORD_ALLOWED_USERS=&lt;user-id-của-bạn&gt;</code></pre>
+<p>Khóa quyền đọc file bí mật:</p>
+<pre><code>chmod 600 ~/.hermes/.env</code></pre>
+
+<div class="box danger"><b>Allowlist là lớp phòng thủ chính.</b> Chỉ để <code>DISCORD_ALLOWED_USERS</code> là chính bạn (có thể nhiều ID, cách nhau dấu phẩy). <b>TUYỆT ĐỐI KHÔNG</b> đặt <code>DISCORD_ALLOW_ALL_USERS=true</code> — nếu không, bất kỳ ai cũng có thể bảo bot chạy lệnh shell trên VPS của bạn.</div>
+
+<h3>7.3 (Khuyến nghị) siết hành vi Discord</h3>
+<pre><code>nano ~/.hermes/config.yaml</code></pre>
+<p>Thêm khối top-level:</p>
+<pre><code>discord:
+  require_mention: true      # trong kênh server phải @mention bot mới trả lời
+  auto_thread: true
+  reactions: true</code></pre>
+
+<!-- ============================================================= -->
+<h2 id="s8"><span class="step">8</span>Chạy thử gateway (foreground)</h2>
+<p>Chạy trực tiếp một lần để xem log kết nối:</p>
+<pre><code>hermes gateway</code></pre>
+<p>Mong đợi log kiểu <code>Discord connected as &lt;tên-bot&gt;</code>. Sang Discord, <b>@mention</b> bot (hoặc DM): <code>bạn đang chạy model nào?</code> → bot trả lời (do Codex). Xong nhấn <kbd>Ctrl</kbd>+<kbd>C</kbd> để dừng (bước sau sẽ cho chạy nền).</p>
+<div class="box warn">Foreground chỉ để test — đóng SSH là bot tắt. Đừng dừng ở đây; làm tiếp Bước 9 để chạy 24/7.</div>
+
+<!-- ============================================================= -->
+<h2 id="s9"><span class="step">9</span>Chạy 24/7 bằng systemd</h2>
+
+<h3>Cách A — để Hermes tự cài service (dễ)</h3>
+<pre><code>hermes gateway install
+hermes gateway status
+hermes gateway stop      # khi cần dừng
+</code></pre>
+
+<h3>Cách B — viết unit thủ công (kiểm soát + tự khởi động lại)</h3>
+<p>Lấy đường dẫn tuyệt đối của <code>hermes</code>:</p>
+<pre><code>which hermes     # ví dụ: /home/hermes/.local/bin/hermes</code></pre>
+<p>Tạo service (sửa <code>ExecStart</code> theo kết quả trên):</p>
+<pre><code>sudo tee /etc/systemd/system/hermes-gateway.service &gt; /dev/null &lt;&lt;'EOF'
+[Unit]
+Description=Hermes Agent Gateway (Discord)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hermes
+Group=hermes
+WorkingDirectory=/home/hermes
+Environment=HERMES_HOME=/home/hermes/.hermes
+ExecStart=/home/hermes/.local/bin/hermes gateway
+Restart=always
+RestartSec=5
+# Giới hạn tài nguyên (chống chạy loạn)
+MemoryMax=1500M
+TasksMax=400
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable --now hermes-gateway
+systemctl status hermes-gateway --no-pager</code></pre>
+<div class="box info">Tự khởi động lại nếu crash (<code>Restart=always</code>) và tự chạy lại sau khi VPS reboot (<code>enable</code>). Không bật <code>ProtectSystem=strict</code> vì agent cần chạy lệnh thật — lớp cô lập đặt ở <b>user thường</b> + <b>Docker terminal</b> (Bước 10).</div>
+
+<!-- ============================================================= -->
+<h2 id="s10"><span class="step">10</span>(Nâng cao) Cô lập tool terminal bằng Docker</h2>
+<div class="box info">Đây là nâng cấp bảo mật mạnh nhất: cho tool <code>terminal</code> chạy <b>trong container Docker</b> thay vì trực tiếp trên VPS, để dù bị lạm dụng cũng khó chạm vào hệ thống host.</div>
+<pre><code>curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker hermes
+newgrp docker   # hoặc đăng xuất/đăng nhập lại</code></pre>
+<p>Trong <code>~/.hermes/config.yaml</code>, đặt terminal backend = docker (theo mẫu trong <code>cli-config.yaml.example</code>):</p>
+<pre><code>terminal:
+  backend: "docker"
+  cwd: "/workspace"
+  docker_image: "nikolaik/python-nodejs:python3.11-nodejs20"
+  docker_run_as_host_user: true
+  container_memory: 2048
+  container_persistent: true</code></pre>
+<p>Khởi động lại service để áp dụng: <code>sudo systemctl restart hermes-gateway</code>.</p>
+<p class="muted">Đánh đổi: chậm hơn chút khi khởi động container, và một số tác vụ cần cài thêm gói trong image. Nhưng an toàn hơn nhiều cho agent mở ra Internet.</p>
+
+<!-- ============================================================= -->
+<h2 id="s11"><span class="step">11</span>Vận hành: log, cập nhật, backup</h2>
+<table>
+<tr><th>Việc</th><th>Lệnh</th></tr>
+<tr><td>Xem log trực tiếp</td><td><code>journalctl -u hermes-gateway -f</code> (Cách B) hoặc <code>hermes gateway status</code> (Cách A)</td></tr>
+<tr><td>Khởi động lại</td><td><code>sudo systemctl restart hermes-gateway</code></td></tr>
+<tr><td>Dừng / bật lại</td><td><code>sudo systemctl stop hermes-gateway</code> / <code>start</code></td></tr>
+<tr><td>Cập nhật Hermes</td><td><code>hermes update</code> rồi <code>sudo systemctl restart hermes-gateway</code></td></tr>
+<tr><td>Kiểm tra credential</td><td><code>hermes auth list</code> (nếu báo “re-auth” thì <code>hermes auth add openai-codex</code>)</td></tr>
+<tr><td>Backup cấu hình</td><td>sao lưu thư mục <code>~/.hermes</code> (chứa .env, config, credential, skills)</td></tr>
+</table>
+<div class="box warn"><b>Token Discord hết hạn / bị lộ:</b> vào Discord Developer Portal → Reset Token → cập nhật lại <code>~/.hermes/.env</code> → <code>restart</code>. Nếu nghi lộ token, reset ngay.</div>
+
+<!-- ============================================================= -->
+<h2 id="s12"><span class="step">12</span>Checklist bảo mật cuối cùng</h2>
+<ul>
+<li>☐ Hermes chạy bằng user <b>hermes</b>, KHÔNG phải root (<code>ps -o user= -C python</code> để kiểm tra tiến trình).</li>
+<li>☐ SSH: chỉ key, đã tắt <code>PasswordAuthentication</code> &amp; <code>PermitRootLogin</code>.</li>
+<li>☐ UFW bật, chỉ chừa OpenSSH; fail2ban đang chạy.</li>
+<li>☐ <code>unattended-upgrades</code> bật (tự vá bảo mật).</li>
+<li>☐ <code>~/.hermes/.env</code> có <code>chmod 600</code>; <b>không</b> có <code>DISCORD_ALLOW_ALL_USERS=true</code>.</li>
+<li>☐ <code>DISCORD_ALLOWED_USERS</code> chỉ là (các) ID của bạn; <code>require_mention: true</code>.</li>
+<li>☐ service <code>enable</code> (tự chạy sau reboot) + <code>Restart=always</code>.</li>
+<li>☐ (Khuyến nghị) terminal chạy trong Docker (Bước 10).</li>
+<li>☐ Đã backup <code>~/.hermes</code>.</li>
+</ul>
+
+<div class="box ok"><b>Xong!</b> Bot Discord giờ chạy 24/7 trên VPS, bộ não là Codex (không API key), tự khởi động lại khi crash/reboot, và đã siết bảo mật ở nhiều lớp. Nhắn/mention bot từ điện thoại lúc nào cũng được — kể cả khi máy tính của bạn tắt.</div>
+
+<footer>
+Ghi nhớ: đây là cấu hình + vận hành, <b>không sửa code</b>. Mọi tính năng (Codex device-code, Discord) đều có sẵn trong Hermes.
+<br>Nếu một bước báo lỗi, lưu lại dòng log (<code>journalctl -u hermes-gateway -n 50</code>) để dò nguyên nhân.
+</footer>
+
+</div>
+
+<script>
+document.querySelectorAll('pre').forEach(function(pre){
+  var btn=document.createElement('button');
+  btn.className='cp'; btn.textContent='Copy';
+  btn.addEventListener('click',function(){
+    var code=pre.querySelector('code');
+    var text=code?code.innerText:pre.innerText;
+    navigator.clipboard.writeText(text).then(function(){
+      btn.textContent='Đã copy'; setTimeout(function(){btn.textContent='Copy';},1500);
+    });
+  });
+  pre.appendChild(btn);
+});
+</script>
+</body>
+</html>
